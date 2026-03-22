@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopKart – Database Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#21262d;--surface3:#30363d;
+  --border:#30363d;--border2:#484f58;
+  --blue:#58a6ff;--blue-bg:#1f3a5f;
+  --green:#3fb950;--green-bg:#1a3a2a;
+  --yellow:#d29922;--yellow-bg:#2d2208;
+  --red:#f85149;--red-bg:#3a1c1c;
+  --purple:#a371f7;--purple-bg:#2d1f4a;
+  --orange:#f0883e;--orange-bg:#3a2008;
+  --cyan:#39d353;--text:#e6edf3;--sub:#8b949e;
+  --font-h:'Baloo 2',cursive;--font-b:'DM Sans',sans-serif;--font-m:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font-b);background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── HEADER ── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-left{display:flex;align-items:center;gap:14px;}
+.logo{font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--text);}
+.logo em{color:var(--blue);font-style:normal;}
+.db-badge{background:var(--blue-bg);color:var(--blue);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid var(--blue);display:flex;align-items:center;gap:5px;}
+.db-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.header-right{display:flex;align-items:center;gap:10px;}
+.btn{padding:7px 16px;border-radius:6px;font-family:var(--font-b);font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;display:flex;align-items:center;gap:6px;}
+.btn-outline{background:transparent;color:var(--sub);border:1px solid var(--border2);}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue);}
+.btn-blue{background:var(--blue);color:#000;}
+.btn-blue:hover{opacity:.85;}
+.btn-red{background:var(--red-bg);color:var(--red);border:1px solid var(--red);}
+.btn-red:hover{background:var(--red);color:#fff;}
+.btn-green{background:var(--green-bg);color:var(--green);border:1px solid var(--green);}
+.btn-green:hover{background:var(--green);color:#000;}
+
+/* ── LAYOUT ── */
+.layout{display:flex;min-height:calc(100vh - 57px);}
+.sidebar{width:240px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:16px 0;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;}
+.sidebar::-webkit-scrollbar{width:4px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.main{flex:1;padding:24px;overflow:auto;}
+
+/* ── SIDEBAR ── */
+.sidebar-title{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;padding:0 16px 8px;}
+.store-item{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;border-left:3px solid transparent;transition:all .2s;}
+.store-item:hover{background:var(--surface2);}
+.store-item.active{background:var(--blue-bg);border-left-color:var(--blue);}
+.store-item.active .si-name{color:var(--blue);}
+.si-left{display:flex;align-items:center;gap:10px;}
+.si-icon{font-size:16px;}
+.si-name{font-size:13px;font-weight:600;color:var(--text);}
+.si-count{font-size:11px;font-weight:700;background:var(--surface3);color:var(--sub);padding:2px 8px;border-radius:10px;}
+.store-item.active .si-count{background:var(--blue);color:#000;}
+.sidebar-sep{height:1px;background:var(--border);margin:12px 16px;}
+.sidebar-section{padding:12px 16px 4px;}
+.sidebar-section p{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+
+/* ── STATS BAR ── */
+.stats-bar{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.stat-icon{font-size:22px;margin-bottom:6px;}
+.stat-val{font-size:22px;font-weight:800;font-family:var(--font-h);}
+.stat-label{font-size:11px;color:var(--sub);margin-top:2px;font-weight:600;}
+.stat-card.blue .stat-val{color:var(--blue);}
+.stat-card.green .stat-val{color:var(--green);}
+.stat-card.yellow .stat-val{color:var(--yellow);}
+.stat-card.red .stat-val{color:var(--red);}
+.stat-card.purple .stat-val{color:var(--purple);}
+.stat-card.orange .stat-val{color:var(--orange);}
+
+/* ── TABLE ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.table-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);}
+.table-head-left{display:flex;align-items:center;gap:12px;}
+.table-title{font-family:var(--font-h);font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.table-subtitle{font-size:12px;color:var(--sub);}
+.table-head-right{display:flex;align-items:center;gap:8px;}
+.search-input{background:var(--surface3);border:1px solid var(--border2);color:var(--text);padding:7px 12px;border-radius:6px;font-family:var(--font-m);font-size:12px;outline:none;width:180px;transition:border .2s;}
+.search-input:focus{border-color:var(--blue);}
+.search-input::placeholder{color:var(--sub);}
+table{width:100%;border-collapse:collapse;}
+thead th{background:var(--surface3);padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface2);}
+td{padding:12px 16px;font-size:13px;vertical-align:top;}
+.td-mono{font-family:var(--font-m);font-size:12px;color:var(--blue);}
+.td-sub{font-size:12px;color:var(--sub);}
+.empty-row td{text-align:center;padding:40px;color:var(--sub);}
+.empty-row .empty-ic{font-size:40px;display:block;margin-bottom:10px;opacity:.4;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;}
+.badge-blue{background:var(--blue-bg);color:var(--blue);}
+.badge-green{background:var(--green-bg);color:var(--green);}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow);}
+.badge-red{background:var(--red-bg);color:var(--red);}
+.badge-purple{background:var(--purple-bg);color:var(--purple);}
+.badge-orange{background:var(--orange-bg);color:var(--orange);}
+
+/* ── JSON VIEWER ── */
+.json-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.json-head{padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.json-head h3{font-family:var(--font-h);font-size:16px;font-weight:700;}
+.json-body{padding:16px 20px;overflow-x:auto;max-height:400px;overflow-y:auto;}
+.json-body::-webkit-scrollbar{width:4px;height:4px;}
+.json-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+pre{font-family:var(--font-m);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all;}
+.jk{color:#79c0ff;}   /* key */
+.js{color:#a5d6ff;}   /* string */
+.jn{color:#79c0ff;}   /* number */
+.jb{color:#ff7b72;}   /* boolean */
+.jnull{color:#8b949e;}/* null */
+
+/* ── DETAIL MODAL ── */
+.detail-mask{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+.detail-mask.open{opacity:1;pointer-events:all;}
+.detail-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:640px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.6);transform:scale(.96) translateY(12px);transition:transform .3s cubic-bezier(.34,1.2,.64,1);}
+.detail-mask.open .detail-box{transform:scale(1) translateY(0);}
+.detail-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.detail-head h3{font-family:var(--font-h);font-size:18px;font-weight:700;}
+.detail-close{background:var(--surface3);border:none;color:var(--sub);width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.detail-close:hover{background:var(--border2);color:var(--text);}
+.detail-body{flex:1;overflow-y:auto;padding:20px;}
+.detail-body::-webkit-scrollbar{width:4px;}
+.detail-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.detail-field{margin-bottom:14px;}
+.df-label{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;}
+.df-val{font-size:13px;font-family:var(--font-m);background:var(--surface2);padding:8px 12px;border-radius:6px;border:1px solid var(--border);word-break:break-all;line-height:1.6;}
+.df-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* ── QUERY CONSOLE ── */
+.console-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;}
+.console-head{padding:12px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.console-head h3{font-family:var(--font-h);font-size:16px;font-weight:700;flex:1;}
+.console-body{padding:16px 20px;}
+.query-presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.qpreset{padding:6px 14px;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;font-family:var(--font-m);font-size:12px;color:var(--text);cursor:pointer;transition:all .2s;}
+.qpreset:hover{border-color:var(--blue);color:var(--blue);}
+.console-result{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;min-height:80px;max-height:300px;overflow-y:auto;font-family:var(--font-m);font-size:12px;line-height:1.7;}
+.console-result::-webkit-scrollbar{width:4px;}
+.console-result::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* ── TOOLBAR TABS ── */
+.view-tabs{display:flex;gap:0;margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px;}
+.vtab{flex:1;padding:8px;border:none;background:transparent;color:var(--sub);font-family:var(--font-b);font-size:13px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .2s;}
+.vtab:hover{color:var(--text);}
+.vtab.active{background:var(--blue);color:#000;}
+
+/* ── ACTIVITY LOG ── */
+.log-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.log-item:last-child{border-bottom:none;}
+.log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.log-dot.write{background:var(--green);}
+.log-dot.read{background:var(--blue);}
+.log-dot.delete{background:var(--red);}
+.log-dot.system{background:var(--purple);}
+.log-msg{font-size:13px;flex:1;}
+.log-time{font-size:11px;color:var(--sub);font-family:var(--font-m);white-space:nowrap;}
+
+/* ── SCHEMA VIEW ── */
+.schema-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+.schema-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.sc-head{padding:12px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:var(--font-h);font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.sc-body{padding:12px 14px;}
+.sc-field{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px dashed var(--border);}
+.sc-field:last-child{border-bottom:none;}
+.sc-fname{font-family:var(--font-m);font-size:12px;color:var(--text);}
+.sc-ftype{font-size:11px;font-weight:700;padding:1px 7px;border-radius:4px;}
+.t-pk{background:var(--yellow-bg);color:var(--yellow);}
+.t-str{background:var(--blue-bg);color:var(--blue);}
+.t-num{background:var(--green-bg);color:var(--green);}
+.t-arr{background:var(--purple-bg);color:var(--purple);}
+.t-obj{background:var(--orange-bg);color:var(--orange);}
+.t-idx{background:var(--surface3);color:var(--sub);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;transform:translateY(10px);transition:all .3s;z-index:9999;display:flex;align-items:center;gap:8px;}
+.toast.show{opacity:1;transform:none;}
+
+/* responsive */
+@media(max-width:900px){.stats-bar{grid-template-columns:repeat(3,1fr);}.schema-wrap{grid-template-columns:1fr 1fr;}.sidebar{display:none;}}
+@media(max-width:600px){.stats-bar{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">Shop<em>Kart</em></div>
+    <div class="db-badge"><div class="db-dot"></div><span id="dbStatusLabel">Connecting…</span></div>
+    <span style="font-size:12px;color:var(--sub);font-family:var(--font-m)" id="dbInfo"></span>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-outline" onclick="refreshAll()">🔄 Refresh</button>
+    <button class="btn btn-green" onclick="exportJSON()">⬇️ Export JSON</button>
+    <button class="btn btn-red" onclick="confirmClearDB()">🗑 Clear DB</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-title">Database Stores</div>
+    <div class="store-item active" id="nav-overview" onclick="showView('overview')">
+      <div class="si-left"><span class="si-icon">🏠</span><span class="si-name">Overview</span></div>
+    </div>
+    <div class="store-item" id="nav-users" onclick="showView('users')">
+      <div class="si-left"><span class="si-icon">👤</span><span class="si-name">Users</span></div>
+      <span class="si-count" id="cnt-users">0</span>
+    </div>
+    <div class="store-item" id="nav-sessions" onclick="showView('sessions')">
+      <div class="si-left"><span class="si-icon">🔑</span><span class="si-name">Sessions</span></div>
+      <span class="si-count" id="cnt-sessions">0</span>
+    </div>
+    <div class="store-item" id="nav-orders" onclick="showView('orders')">
+      <div class="si-left"><span class="si-icon">📦</span><span class="si-name">Orders</span></div>
+      <span class="si-count" id="cnt-orders">0</span>
+    </div>
+    <div class="store-item" id="nav-addresses" onclick="showView('addresses')">
+      <div class="si-left"><span class="si-icon">📍</span><span class="si-name">Addresses</span></div>
+      <span class="si-count" id="cnt-addresses">0</span>
+    </div>
+    <div class="store-item" id="nav-cart" onclick="showView('cart')">
+      <div class="si-left"><span class="si-icon">🛒</span><span class="si-name">Cart</span></div>
+      <span class="si-count" id="cnt-cart">0</span>
+    </div>
+    <div class="store-item" id="nav-wishlist" onclick="showView('wishlist')">
+      <div class="si-left"><span class="si-icon">❤️</span><span class="si-name">Wishlist</span></div>
+      <span class="si-count" id="cnt-wishlist">0</span>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div class="store-item" id="nav-schema" onclick="showView('schema')">
+      <div class="si-left"><span class="si-icon">🗂</span><span class="si-name">Schema</span></div>
+    </div>
+    <div class="store-item" id="nav-console" onclick="showView('console')">
+      <div class="si-left"><span class="si-icon">⌨️</span><span class="si-name">Query Console</span></div>
+    </div>
+    <div class="store-item" id="nav-log" onclick="showView('log')">
+      <div class="si-left"><span class="si-icon">📋</span><span class="si-name">Activity Log</span></div>
+      <span class="si-count" id="cnt-log">0</span>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div class="sidebar-section">
+      <p>Quick Info</p>
+      <div style="font-size:12px;color:var(--sub);line-height:1.8;">
+        DB: <span style="color:var(--blue);font-family:var(--font-m)">ShopKartDB</span><br>
+        Version: <span style="color:var(--green);font-family:var(--font-m)">1</span><br>
+        Engine: <span style="color:var(--yellow);font-family:var(--font-m)">IndexedDB</span><br>
+        Scope: <span style="color:var(--purple);font-family:var(--font-m)">Browser</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main" id="mainContent">
+    <div style="text-align:center;padding:60px;color:var(--sub);">
+      <div style="font-size:48px;margin-bottom:16px;">⚡</div>
+      <div style="font-family:var(--font-h);font-size:20px;">Connecting to ShopKartDB…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="detail-mask" id="detailMask" onclick="closeDetail(event)">
+  <div class="detail-box">
+    <div class="detail-head">
+      <h3 id="detailTitle">Record Detail</h3>
+      <button class="detail-close" onclick="closeDetailBtn()">✕</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toastEl"></div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════
+//  DB CONNECTION
+// ═══════════════════════════════════════════════════════
+const DB_NAME='ShopKartDB', DB_VER=1;
+let db=null, activityLog=[], currentView='overview';
+
+function initDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=e=>{
+      // Create stores if they don't exist (same schema as main app)
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('users')){const u=d.createObjectStore('users',{keyPath:'phone'});u.createIndex('phone','phone',{unique:true});}
+      if(!d.objectStoreNames.contains('sessions'))d.createObjectStore('sessions',{keyPath:'key'});
+      if(!d.objectStoreNames.contains('orders')){const o=d.createObjectStore('orders',{keyPath:'id'});o.createIndex('phone','phone',{unique:false});o.createIndex('createdAt','createdAt',{unique:false});}
+      if(!d.objectStoreNames.contains('addresses')){const a=d.createObjectStore('addresses',{keyPath:'addrId'});a.createIndex('phone','phone',{unique:false});}
+      if(!d.objectStoreNames.contains('cart')){const c=d.createObjectStore('cart',{keyPath:'cartKey'});c.createIndex('phone','phone',{unique:false});}
+      if(!d.objectStoreNames.contains('wishlist')){const w=d.createObjectStore('wishlist',{keyPath:'wishKey'});w.createIndex('phone','phone',{unique:false});}
+    };
+    req.onsuccess=e=>{db=e.target.result;res(db);};
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+
+function getAllFromStore(store){
+  return new Promise((res,rej)=>{
+    const req=db.transaction(store,'readonly').objectStore(store).getAll();
+    req.onsuccess=()=>res(req.result);
+    req.onerror=rej;
+  });
+}
+function countStore(store){
+  return new Promise((res,rej)=>{
+    const req=db.transaction(store,'readonly').objectStore(store).count();
+    req.onsuccess=()=>res(req.result);req.onerror=rej;
+  });
+}
+function deleteRecord(store,key){
+  return new Promise((res,rej)=>{
+    const req=db.transaction(store,'readwrite').objectStore(store).delete(key);
+    req.onsuccess=res;req.onerror=rej;
+  });
+}
+function clearStore(store){
+  return new Promise((res,rej)=>{
+    const req=db.transaction(store,'readwrite').objectStore(store).clear();
+    req.onsuccess=res;req.onerror=rej;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  ACTIVITY LOG
+// ═══════════════════════════════════════════════════════
+function log(type,msg){
+  activityLog.unshift({type,msg,time:new Date().toLocaleTimeString()});
+  if(activityLog.length>100)activityLog.pop();
+  document.getElementById('cnt-log').textContent=activityLog.length;
+  if(currentView==='log')renderLog();
+}
+
+// ═══════════════════════════════════════════════════════
+//  COUNTS + BADGES
+// ═══════════════════════════════════════════════════════
+const STORES=['users','sessions','orders','addresses','cart','wishlist'];
+async function refreshCounts(){
+  for(const s of STORES){
+    const n=await countStore(s);
+    const el=document.getElementById(`cnt-${s}`);
+    if(el)el.textContent=n;
+  }
+  log('read','Refreshed all store counts');
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════
+function showView(view){
+  currentView=view;
+  document.querySelectorAll('.store-item').forEach(el=>el.classList.remove('active'));
+  const navEl=document.getElementById(`nav-${view}`);
+  if(navEl)navEl.classList.add('active');
+  const renders={
+    overview:renderOverview,users:()=>renderTable('users'),
+    sessions:()=>renderTable('sessions'),orders:()=>renderTable('orders'),
+    addresses:()=>renderTable('addresses'),cart:()=>renderTable('cart'),
+    wishlist:()=>renderTable('wishlist'),
+    schema:renderSchema,console:renderConsole,log:renderLog
+  };
+  if(renders[view])renders[view]();
+}
+
+// ═══════════════════════════════════════════════════════
+//  OVERVIEW
+// ═══════════════════════════════════════════════════════
+async function renderOverview(){
+  log('read','Loaded overview dashboard');
+  const counts={};
+  for(const s of STORES)counts[s]=await countStore(s);
+  const orders=await getAllFromStore('orders');
+  const totalRevenue=orders.filter(o=>o.status!=='cancelled'&&o.status!=='returned').reduce((s,o)=>s+o.total,0);
+  const statusBreakdown={confirmed:0,processing:0,shipped:0,delivered:0,cancelled:0,returned:0};
+  orders.forEach(o=>{ if(statusBreakdown[o.status]!==undefined)statusBreakdown[o.status]++; });
+  const sessions=await getAllFromStore('sessions');
+  const activeSession=sessions.find(s=>s.key==='session');
+
+  const main=document.getElementById('mainContent');
+  main.innerHTML=`
+    <div style="margin-bottom:20px;">
+      <h2 style="font-family:var(--font-h);font-size:24px;font-weight:800;margin-bottom:4px;">Database Overview</h2>
+      <p style="color:var(--sub);font-size:14px;">Real-time view of all data stored in <span style="color:var(--blue);font-family:var(--font-m)">ShopKartDB</span> IndexedDB</p>
+    </div>
+
+    ${activeSession?`
+    <div style="background:var(--green-bg);border:1px solid var(--green);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:24px;">👤</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--green);">Active Session</div>
+        <div style="font-size:13px;color:var(--text);margin-top:2px;">${activeSession.user.name} &nbsp;·&nbsp; +91 ${activeSession.user.phone} &nbsp;·&nbsp; ${activeSession.user.email||'No email'}</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:2px;font-family:var(--font-m);">Session created: ${new Date(activeSession.ts).toLocaleString()}</div>
+      </div>
+    </div>`:`
+    <div style="background:var(--yellow-bg);border:1px solid var(--yellow);border-radius:10px;padding:14px 18px;margin-bottom:20px;">
+      <span style="color:var(--yellow);font-weight:700;">⚠️ No active session</span>
+      <span style="color:var(--sub);font-size:13px;margin-left:8px;">Open ShopKart and login to create a session</span>
+    </div>`}
+
+    <div class="stats-bar">
+      <div class="stat-card blue"><div class="stat-icon">👤</div><div class="stat-val">${counts.users}</div><div class="stat-label">Users</div></div>
+      <div class="stat-card green"><div class="stat-icon">📦</div><div class="stat-val">${counts.orders}</div><div class="stat-label">Orders</div></div>
+      <div class="stat-card yellow"><div class="stat-icon">💰</div><div class="stat-val">₹${totalRevenue.toLocaleString('en-IN')}</div><div class="stat-label">Revenue</div></div>
+      <div class="stat-card purple"><div class="stat-icon">📍</div><div class="stat-val">${counts.addresses}</div><div class="stat-label">Addresses</div></div>
+      <div class="stat-card orange"><div class="stat-icon">🛒</div><div class="stat-val">${counts.cart}</div><div class="stat-label">Cart Items</div></div>
+      <div class="stat-card red"><div class="stat-icon">❤️</div><div class="stat-val">${counts.wishlist}</div><div class="stat-label">Wishlist</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div class="table-wrap">
+        <div class="table-head" style="padding:12px 16px;">
+          <div class="table-title" style="font-size:15px;">📊 Order Status Breakdown</div>
+        </div>
+        <table>
+          <thead><tr><th>Status</th><th>Count</th><th>Share</th></tr></thead>
+          <tbody>
+            ${Object.entries(statusBreakdown).map(([st,n])=>`
+              <tr>
+                <td>${statusBadge(st)}</td>
+                <td style="font-weight:700;">${n}</td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="flex:1;height:6px;background:var(--surface3);border-radius:3px;min-width:80px;">
+                      <div style="height:100%;border-radius:3px;background:var(--blue);width:${orders.length?Math.round(n/orders.length*100):0}%"></div>
+                    </div>
+                    <span class="td-sub">${orders.length?Math.round(n/orders.length*100):0}%</span>
+                  </div>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-head" style="padding:12px 16px;">
+          <div class="table-title" style="font-size:15px;">🗄️ Store Sizes</div>
+        </div>
+        <table>
+          <thead><tr><th>Store</th><th>Records</th><th>Status</th></tr></thead>
+          <tbody>
+            ${STORES.map(s=>`
+              <tr>
+                <td><span class="td-mono">${s}</span></td>
+                <td style="font-weight:700;">${counts[s]}</td>
+                <td><span class="badge ${counts[s]>0?'badge-green':'badge-yellow'}">${counts[s]>0?'Has data':'Empty'}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    ${orders.length>0?`
+    <div class="table-wrap">
+      <div class="table-head"><div class="table-title">🕐 Recent Orders</div><button class="btn btn-outline" onclick="showView('orders')">View All →</button></div>
+      <table>
+        <thead><tr><th>Order ID</th><th>User</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${orders.slice(0,5).map(o=>`
+            <tr style="cursor:pointer;" onclick='showDetail("Order",${JSON.stringify(JSON.stringify(o))})'>
+              <td class="td-mono">${o.id}</td>
+              <td class="td-sub">+91 ${o.phone||'—'}</td>
+              <td>${o.items.length} item${o.items.length!==1?'s':''}</td>
+              <td style="font-weight:700;color:var(--green);">₹${o.total.toLocaleString('en-IN')}</td>
+              <td class="td-sub" style="font-size:12px;">${(o.payment||'').replace(/[📱💳🏦💵]/g,'').trim()}</td>
+              <td>${statusBadge(o.status)}</td>
+              <td class="td-sub">${o.date||'—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:''}
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TABLE VIEWS
+// ═══════════════════════════════════════════════════════
+let allData={}, searchTerm='';
+
+async function renderTable(store){
+  log('read',`Queried store: ${store}`);
+  const rows=await getAllFromStore(store);
+  allData[store]=rows;
+  renderTableHTML(store,rows,'');
+}
+
+function renderTableHTML(store,rows,search){
+  const main=document.getElementById('mainContent');
+  const filtered=search?rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase())):rows;
+
+  const configs={
+    users:{title:'👤 Users',cols:['phone','name','email','createdAt'],keyFn:r=>r.phone},
+    sessions:{title:'🔑 Sessions',cols:['key','user.name','user.phone','ts'],keyFn:r=>r.key},
+    orders:{title:'📦 Orders',cols:['id','phone','status','total','items','payment','date'],keyFn:r=>r.id},
+    addresses:{title:'📍 Addresses',cols:['addrId','phone','type','name','city','state','pin'],keyFn:r=>r.addrId},
+    cart:{title:'🛒 Cart',cols:['cartKey','phone','pid','qty'],keyFn:r=>r.cartKey},
+    wishlist:{title:'❤️ Wishlist',cols:['wishKey','phone','pid'],keyFn:r=>r.wishKey},
+  };
+  const cfg=configs[store];
+
+  main.innerHTML=`
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <h2 style="font-family:var(--font-h);font-size:22px;font-weight:800;">${cfg.title}</h2>
+        <p style="color:var(--sub);font-size:13px;margin-top:2px;">${filtered.length} of ${rows.length} records &nbsp;·&nbsp; <span style="font-family:var(--font-m);color:var(--blue);">ShopKartDB.${store}</span></p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="refreshAll()">🔄 Refresh</button>
+        <button class="btn btn-red" style="font-size:12px;" onclick="confirmClearStore('${store}')">🗑 Clear Store</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head">
+        <div class="table-head-left">
+          <div class="table-title">${cfg.title}</div>
+          <div class="table-subtitle">${filtered.length} records</div>
+        </div>
+        <div class="table-head-right">
+          <input class="search-input" placeholder="Search records…" value="${search}" oninput="filterTable('${store}',this.value)">
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              ${cfg.cols.map(c=>`<th>${c}</th>`).join('')}
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.length===0?`<tr class="empty-row"><td colspan="${cfg.cols.length+1}"><span class="empty-ic">📭</span>No records found</td></tr>`
+            :filtered.map(r=>`
+              <tr>
+                ${cfg.cols.map(c=>{
+                  const val=c.includes('.')?c.split('.').reduce((o,k)=>o&&o[k],r):r[c];
+                  return`<td>${renderCell(c,val,store)}</td>`;
+                }).join('')}
+                <td>
+                  <div style="display:flex;gap:6px;">
+                    <button class="btn btn-outline" style="padding:4px 10px;font-size:11px;" onclick='showDetail("${store.charAt(0).toUpperCase()+store.slice(1)} Record",${JSON.stringify(JSON.stringify(r))})'>👁 View</button>
+                    <button class="btn btn-red" style="padding:4px 10px;font-size:11px;" onclick="deleteRec('${store}','${escKey(cfg.keyFn(r))}')">🗑</button>
+                  </div>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    ${store==='orders'&&rows.length>0?renderOrdersAnalytics(rows):''}
+  `;
+}
+function escKey(k){return String(k).replace(/'/g,"\\'");}
+function filterTable(store,val){renderTableHTML(store,allData[store]||[],val);}
+
+function renderCell(col,val,store){
+  if(val===undefined||val===null)return`<span class="td-sub">—</span>`;
+  if(col==='status')return statusBadge(val);
+  if(col==='createdAt'||col==='ts')return`<span class="td-sub" style="font-size:11px;">${new Date(val).toLocaleString()}</span>`;
+  if(col==='total')return`<span style="color:var(--green);font-weight:700;">₹${Number(val).toLocaleString('en-IN')}</span>`;
+  if(col==='items')return`<span class="badge badge-blue">${Array.isArray(val)?val.length:0} items</span>`;
+  if(col==='phone'||col.endsWith('.phone'))return`<span class="td-mono">+91 ${val}</span>`;
+  if(col==='pid')return productName(val);
+  if(col==='qty')return`<span class="badge badge-orange">×${val}</span>`;
+  if(col==='type')return`<span class="badge badge-purple">${val}</span>`;
+  if(col==='payment')return`<span class="td-sub" style="font-size:12px;">${String(val).replace(/[📱💳🏦💵]/g,'').trim()}</span>`;
+  if(typeof val==='string'&&val.length>40)return`<span title="${val}">${val.substring(0,40)}…</span>`;
+  return`<span>${val}</span>`;
+}
+function productName(pid){
+  const products={1:'📱 Redmi Note 13',2:'🎧 Galaxy Buds 2',3:'💻 ASUS VivoBook',4:'👖 Levi\'s Jeans',5:'📺 Samsung QLED',6:'👟 Nike Air Max',7:'🥤 Prestige Mixer',8:'🧹 Dyson V12',9:'📚 Atomic Habits',10:'🎧 boAt Airdopes',11:'🧴 Himalaya',12:'🎒 Wildcraft',13:'🫧 IFB Machine',14:'👔 Wrangler',15:'🍶 Milton Flask'};
+  return products[pid]?`<span style="font-size:12px">${products[pid]}</span>`:`<span class="td-mono">PID:${pid}</span>`;
+}
+function statusBadge(st){
+  const map={confirmed:'badge-blue',processing:'badge-yellow',shipped:'badge-green',delivered:'badge-green',cancelled:'badge-red',returned:'badge-purple'};
+  const icons={confirmed:'✅',processing:'🔄',shipped:'🚚',delivered:'📦',cancelled:'❌',returned:'↩️'};
+  return`<span class="badge ${map[st]||'badge-blue'}">${icons[st]||''} ${st}</span>`;
+}
+function renderOrdersAnalytics(orders){
+  const delivered=orders.filter(o=>o.status==='delivered').length;
+  const revenue=orders.filter(o=>!['cancelled','returned'].includes(o.status)).reduce((s,o)=>s+o.total,0);
+  const savings=orders.reduce((s,o)=>s+(o.oldTotal-o.total),0);
+  return`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--sub);margin-bottom:6px;">TOTAL REVENUE</div>
+        <div style="font-size:24px;font-weight:800;color:var(--green);font-family:var(--font-h);">₹${revenue.toLocaleString('en-IN')}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--sub);margin-bottom:6px;">DELIVERED ORDERS</div>
+        <div style="font-size:24px;font-weight:800;color:var(--blue);font-family:var(--font-h);">${delivered} / ${orders.length}</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--sub);margin-bottom:6px;">TOTAL SAVINGS</div>
+        <div style="font-size:24px;font-weight:800;color:var(--yellow);font-family:var(--font-h);">₹${savings.toLocaleString('en-IN')}</div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  SCHEMA VIEW
+// ═══════════════════════════════════════════════════════
+function renderSchema(){
+  log('read','Viewed database schema');
+  const schema=[
+    {name:'users',icon:'👤',color:'var(--blue)',fields:[
+      {n:'phone',t:'pk'},{n:'name',t:'str'},{n:'email',t:'str'},{n:'createdAt',t:'num'},{n:'updatedAt',t:'num'}
+    ],indexes:['phone']},
+    {name:'sessions',icon:'🔑',color:'var(--yellow)',fields:[
+      {n:'key',t:'pk'},{n:'user',t:'obj'},{n:'ts',t:'num'}
+    ],indexes:[]},
+    {name:'orders',icon:'📦',color:'var(--green)',fields:[
+      {n:'id',t:'pk'},{n:'phone',t:'str'},{n:'items',t:'arr'},{n:'total',t:'num'},{n:'oldTotal',t:'num'},{n:'address',t:'obj'},{n:'payment',t:'str'},{n:'status',t:'str'},{n:'createdAt',t:'num'},{n:'date',t:'str'},{n:'trackingSteps',t:'arr'}
+    ],indexes:['phone','createdAt']},
+    {name:'addresses',icon:'📍',color:'var(--purple)',fields:[
+      {n:'addrId',t:'pk'},{n:'phone',t:'str'},{n:'idx',t:'num'},{n:'type',t:'str'},{n:'name',t:'str'},{n:'line1',t:'str'},{n:'city',t:'str'},{n:'state',t:'str'},{n:'pin',t:'str'}
+    ],indexes:['phone']},
+    {name:'cart',icon:'🛒',color:'var(--orange)',fields:[
+      {n:'cartKey',t:'pk'},{n:'phone',t:'str'},{n:'pid',t:'num'},{n:'qty',t:'num'}
+    ],indexes:['phone']},
+    {name:'wishlist',icon:'❤️',color:'var(--red)',fields:[
+      {n:'wishKey',t:'pk'},{n:'phone',t:'str'},{n:'pid',t:'num'}
+    ],indexes:['phone']},
+  ];
+  const typeLabel={pk:'PRIMARY KEY',str:'String',num:'Number',arr:'Array',obj:'Object'};
+  const typeCls={pk:'t-pk',str:'t-str',num:'t-num',arr:'t-arr',obj:'t-obj'};
+  document.getElementById('mainContent').innerHTML=`
+    <div style="margin-bottom:20px;">
+      <h2 style="font-family:var(--font-h);font-size:22px;font-weight:800;">🗂 Database Schema</h2>
+      <p style="color:var(--sub);font-size:13px;margin-top:2px;">ShopKartDB v1 — 6 object stores with indexes</p>
+    </div>
+    <div class="schema-wrap">
+      ${schema.map(s=>`
+        <div class="schema-card">
+          <div class="sc-head" style="border-bottom:2px solid ${s.color};">
+            <span>${s.icon}</span>
+            <span style="font-family:var(--font-m);font-size:14px;color:${s.color}">${s.name}</span>
+          </div>
+          <div class="sc-body">
+            ${s.fields.map(f=>`
+              <div class="sc-field">
+                <span class="sc-fname">${f.n}</span>
+                <span class="sc-ftype ${typeCls[f.t]}">${typeLabel[f.t]}</span>
+              </div>`).join('')}
+            ${s.indexes.length?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+              <div style="font-size:10px;color:var(--sub);font-weight:700;margin-bottom:4px;">INDEXES</div>
+              ${s.indexes.map(i=>`<span class="sc-ftype t-idx" style="margin-right:4px;">${i}</span>`).join('')}
+            </div>`:''}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:4px;">
+      <h3 style="font-family:var(--font-h);font-size:16px;font-weight:700;margin-bottom:12px;">🔗 Relationships</h3>
+      <div style="font-family:var(--font-m);font-size:13px;line-height:2;color:var(--sub);">
+        <span style="color:var(--blue)">users.phone</span> ──── <span style="color:var(--green)">orders.phone</span> (one-to-many)<br>
+        <span style="color:var(--blue)">users.phone</span> ──── <span style="color:var(--purple)">addresses.phone</span> (one-to-many)<br>
+        <span style="color:var(--blue)">users.phone</span> ──── <span style="color:var(--orange)">cart.phone</span> (one-to-many)<br>
+        <span style="color:var(--blue)">users.phone</span> ──── <span style="color:var(--red)">wishlist.phone</span> (one-to-many)<br>
+        <span style="color:var(--blue)">users.phone</span> ──── <span style="color:var(--yellow)">sessions.user.phone</span> (one-to-one)
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+//  QUERY CONSOLE
+// ═══════════════════════════════════════════════════════
+function renderConsole(){
+  log('system','Opened query console');
+  document.getElementById('mainContent').innerHTML=`
+    <div style="margin-bottom:16px;">
+      <h2 style="font-family:var(--font-h);font-size:22px;font-weight:800;">⌨️ Query Console</h2>
+      <p style="color:var(--sub);font-size:13px;margin-top:2px;">Run preset queries against ShopKartDB</p>
+    </div>
+    <div class="console-wrap">
+      <div class="console-head">
+        <h3>📋 Preset Queries</h3>
+        <button class="btn btn-outline" onclick="clearConsole()">Clear</button>
+      </div>
+      <div class="console-body">
+        <div class="query-presets">
+          <div class="qpreset" onclick="runQuery('allUsers')">GET users/*</div>
+          <div class="qpreset" onclick="runQuery('activeSession')">GET sessions/session</div>
+          <div class="qpreset" onclick="runQuery('allOrders')">GET orders/*</div>
+          <div class="qpreset" onclick="runQuery('delivered')">GET orders WHERE status=delivered</div>
+          <div class="qpreset" onclick="runQuery('cancelled')">GET orders WHERE status=cancelled</div>
+          <div class="qpreset" onclick="runQuery('allAddresses')">GET addresses/*</div>
+          <div class="qpreset" onclick="runQuery('allCart')">GET cart/*</div>
+          <div class="qpreset" onclick="runQuery('allWishlist')">GET wishlist/*</div>
+          <div class="qpreset" onclick="runQuery('revenue')">AGGREGATE total revenue</div>
+          <div class="qpreset" onclick="runQuery('topProducts')">AGGREGATE top products</div>
+          <div class="qpreset" onclick="runQuery('dbInfo')">SHOW db info</div>
+        </div>
+        <div class="console-result" id="consoleResult">
+          <span style="color:var(--sub);">// Click a query above to run it…</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+async function runQuery(q){
+  const el=document.getElementById('consoleResult');
+  el.innerHTML=`<span style="color:var(--yellow);">Running query…</span>`;
+  log('read',`Ran query: ${q}`);
+  try{
+    let result;
+    if(q==='allUsers')result=await getAllFromStore('users');
+    else if(q==='activeSession'){const s=await getAllFromStore('sessions');result=s.find(x=>x.key==='session')||{message:'No active session'};}
+    else if(q==='allOrders')result=await getAllFromStore('orders');
+    else if(q==='delivered'){const o=await getAllFromStore('orders');result=o.filter(x=>x.status==='delivered');}
+    else if(q==='cancelled'){const o=await getAllFromStore('orders');result=o.filter(x=>x.status==='cancelled');}
+    else if(q==='allAddresses')result=await getAllFromStore('addresses');
+    else if(q==='allCart')result=await getAllFromStore('cart');
+    else if(q==='allWishlist')result=await getAllFromStore('wishlist');
+    else if(q==='revenue'){
+      const o=await getAllFromStore('orders');
+      const active=o.filter(x=>!['cancelled','returned'].includes(x.status));
+      result={totalOrders:o.length,activeOrders:active.length,totalRevenue:`₹${active.reduce((s,x)=>s+x.total,0).toLocaleString('en-IN')}`,totalSavings:`₹${o.reduce((s,x)=>s+(x.oldTotal-x.total),0).toLocaleString('en-IN')}`};
+    }
+    else if(q==='topProducts'){
+      const o=await getAllFromStore('orders');
+      const freq={};
+      o.forEach(x=>x.items.forEach(i=>{if(!freq[i.id])freq[i.id]={name:i.name,emoji:i.emoji,count:0,revenue:0};freq[i.id].count+=i.qty;freq[i.id].revenue+=i.price*i.qty;}));
+      result=Object.values(freq).sort((a,b)=>b.count-a.count).slice(0,5);
+    }
+    else if(q==='dbInfo'){result={name:db.name,version:db.version,stores:[...db.objectStoreNames],origin:window.location.origin};}
+    el.innerHTML=syntaxHighlight(JSON.stringify(result,null,2));
+  }catch(err){el.innerHTML=`<span style="color:var(--red);">Error: ${err.message}</span>`;}
+}
+function clearConsole(){const el=document.getElementById('consoleResult');if(el)el.innerHTML=`<span style="color:var(--sub);">// Click a query above to run it…</span>`;}
+
+// ═══════════════════════════════════════════════════════
+//  ACTIVITY LOG
+// ═══════════════════════════════════════════════════════
+function renderLog(){
+  const colors={write:'log-dot.write',read:'log-dot.read',delete:'log-dot.delete',system:'log-dot.system'};
+  document.getElementById('mainContent').innerHTML=`
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <h2 style="font-family:var(--font-h);font-size:22px;font-weight:800;">📋 Activity Log</h2>
+        <p style="color:var(--sub);font-size:13px;margin-top:2px;">${activityLog.length} operations recorded this session</p>
+      </div>
+      <button class="btn btn-outline" onclick="activityLog=[];renderLog();">Clear Log</button>
+    </div>
+    <div class="table-wrap">
+      <div style="padding:16px 20px;">
+        <div style="display:flex;gap:16px;margin-bottom:16px;font-size:12px;font-weight:600;">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:5px;"></span>Write</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blue);margin-right:5px;"></span>Read</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:5px;"></span>Delete</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--purple);margin-right:5px;"></span>System</span>
+        </div>
+        ${activityLog.length===0?`<div style="text-align:center;padding:30px;color:var(--sub);">No activity yet. Start navigating to see logs.</div>`
+        :activityLog.map(l=>`
+          <div class="log-item">
+            <div class="log-dot ${l.type}"></div>
+            <div class="log-msg">${l.msg}</div>
+            <div class="log-time">${l.time}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+//  DETAIL MODAL
+// ═══════════════════════════════════════════════════════
+function showDetail(title,jsonStr){
+  const obj=JSON.parse(jsonStr);
+  document.getElementById('detailTitle').textContent=title;
+  const body=document.getElementById('detailBody');
+  body.innerHTML=`
+    <div class="df-grid" style="margin-bottom:16px;">
+      ${Object.entries(obj).filter(([k,v])=>typeof v!=='object'||v===null).map(([k,v])=>`
+        <div class="detail-field">
+          <div class="df-label">${k}</div>
+          <div class="df-val">${v===null?'null':String(v)}</div>
+        </div>`).join('')}
+    </div>
+    ${Object.entries(obj).filter(([k,v])=>typeof v==='object'&&v!==null).map(([k,v])=>`
+      <div class="detail-field">
+        <div class="df-label">${k} (${Array.isArray(v)?`array[${v.length}]`:'object'})</div>
+        <div class="df-val" style="max-height:200px;overflow-y:auto;">
+          <pre>${syntaxHighlight(JSON.stringify(v,null,2))}</pre>
+        </div>
+      </div>`).join('')}
+  `;
+  document.getElementById('detailMask').classList.add('open');
+}
+function closeDetail(e){if(e.target===document.getElementById('detailMask'))closeDetailBtn();}
+function closeDetailBtn(){document.getElementById('detailMask').classList.remove('open');}
+
+// ═══════════════════════════════════════════════════════
+//  DELETE / CLEAR
+// ═══════════════════════════════════════════════════════
+async function deleteRec(store,key){
+  if(!confirm(`Delete record "${key}" from ${store}?`))return;
+  await deleteRecord(store,key);
+  log('delete',`Deleted record "${key}" from ${store}`);
+  showToast(`🗑 Record deleted from ${store}`);
+  await refreshCounts();
+  renderTable(store);
+}
+async function confirmClearStore(store){
+  if(!confirm(`⚠️ Clear ALL records from "${store}"? This cannot be undone.`))return;
+  await clearStore(store);
+  log('delete',`Cleared entire store: ${store}`);
+  showToast(`🗑 Store "${store}" cleared`);
+  await refreshCounts();
+  renderTable(store);
+}
+async function confirmClearDB(){
+  if(!confirm('⚠️ DELETE ALL DATA from ShopKartDB? This will remove all users, orders, sessions, addresses, cart and wishlist data. This CANNOT be undone.'))return;
+  for(const s of STORES)await clearStore(s);
+  log('delete','Cleared entire ShopKartDB');
+  showToast('🗑 All database data cleared');
+  await refreshCounts();
+  renderOverview();
+}
+
+// ═══════════════════════════════════════════════════════
+//  EXPORT JSON
+// ═══════════════════════════════════════════════════════
+async function exportJSON(){
+  const data={};
+  for(const s of STORES)data[s]=await getAllFromStore(s);
+  data._meta={exportedAt:new Date().toISOString(),dbVersion:db.version,dbName:DB_NAME};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`ShopKartDB_${Date.now()}.json`;a.click();
+  URL.revokeObjectURL(url);
+  log('read','Exported full database to JSON');
+  showToast('⬇️ Database exported as JSON');
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function syntaxHighlight(json){
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,m=>{
+    let cls='jn';
+    if(/^"/.test(m)){if(/:$/.test(m)){cls='jk';m=m.replace(':','');return`<span class="${cls}">${m}</span>:`;}else{cls='js';}}
+    else if(/true|false/.test(m)){cls='jb';}
+    else if(/null/.test(m)){cls='jnull';}
+    return`<span class="${cls}">${m}</span>`;
+  });
+}
+
+let toastTimer;
+function showToast(msg){
+  const el=document.getElementById('toastEl');el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+async function refreshAll(){
+  log('system','Manual refresh triggered');
+  await refreshCounts();
+  showView(currentView);
+  showToast('🔄 Data refreshed from database');
+}
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+async function boot(){
+  log('system','Database viewer initialising…');
+  try{
+    await initDB();
+    document.getElementById('dbStatusLabel').textContent='ShopKartDB · Connected';
+    document.getElementById('dbInfo').textContent=`v${db.version} · IndexedDB`;
+    log('system',`Connected to ${DB_NAME} v${db.version} successfully`);
+    await refreshCounts();
+    renderOverview();
+    showToast('✅ Connected to ShopKartDB');
+    // auto-refresh every 30s
+    setInterval(async()=>{await refreshCounts();if(currentView==='overview')renderOverview();},30000);
+  }catch(err){
+    document.getElementById('dbStatusLabel').textContent='Connection Failed';
+    document.querySelector('.db-dot').style.background='var(--red)';
+    document.querySelector('.db-dot').style.animation='none';
+    document.getElementById('mainContent').innerHTML=`
+      <div style="text-align:center;padding:60px;color:var(--red);">
+        <div style="font-size:48px;margin-bottom:16px;">❌</div>
+        <div style="font-family:var(--font-h);font-size:20px;margin-bottom:8px;">Failed to connect to ShopKartDB</div>
+        <div style="font-size:14px;color:var(--sub);">${err.message}</div>
+        <div style="margin-top:20px;font-size:13px;color:var(--sub);">Make sure you are opening this file in a browser (not as a raw file). IndexedDB requires a browser origin.</div>
+      </div>
+    `;
+    log('system',`Connection failed: ${err.message}`);
+  }
+}
+boot();
+</script>
+</body>
+</html>
